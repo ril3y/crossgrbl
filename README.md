@@ -4,17 +4,16 @@ Drop-in replacement controller for the **Langmuir Systems CrossFire** CNC plasma
 
 This project replaces the stock CrossFire controller board with commodity hardware while keeping the full FireControl experience — jogging, G-code streaming, torch control, pierce delay overrides, and THC support.
 
+The CrossFire already has external **Leadshine stepper drivers** built into the electronics enclosure — the Arduino only needs to output 5V logic-level step/direction/enable signals. No motor driver shield (gShield, CNC shield, etc.) is required.
+
 ## What You Need
 
 | Component | Purpose | Approx Cost |
 |-----------|---------|-------------|
-| Arduino Uno R3 | Motion controller (ATmega328P @ 16MHz) | ~$15 |
-| Electronics-Salon Screw Terminal Shield | Breakout for wiring stepper drivers | ~$12 |
-| 2x Stepper drivers (DM542, TB6600, etc.) | X and Y axis motor drivers | ~$30 |
-| Arduino Nano clone (CH340) | THC controller (optional) | ~$5 |
-| Relay module or MOSFET | Torch fire signal | ~$5 |
+| Arduino Uno R3 | Motion controller (ATmega328P @ 16MHz) | ~$25 |
+| Electronics-Salon Screw Terminal Shield | Breakout for wiring to CrossFire drivers | ~$8 |
 
-**Total: ~$65** (vs $200+ for a stock CrossFire replacement board)
+**Total: ~$33** (vs $200+ for a stock CrossFire replacement board)
 
 ## Screw Terminal Shield Wiring
 
@@ -26,42 +25,39 @@ The shield plugs directly onto the Arduino Uno. All connections below refer to t
 
 ### Motor Connections
 
-The CrossFire is a 2-axis (X/Y) plasma table. Each axis needs three wires to its stepper driver: **STEP**, **DIR**, and **ENABLE**.
+The CrossFire is a 2-axis (X/Y) plasma table. The Leadshine stepper drivers are already in the CrossFire's electronics enclosure — you just need to connect the 5V logic signals from the Arduino to the driver inputs.
+
+Each axis needs three wires: **STEP**, **DIR**, and **ENABLE**.
 
 ```
-                    STEPPER DRIVER (X)              STEPPER DRIVER (Y)
-                   ┌──────────────┐                ┌──────────────┐
-Terminal 2  ──────►│ STEP         │  Terminal 3 ──►│ STEP         │
-Terminal 5  ──────►│ DIR          │  Terminal 6 ──►│ DIR          │
-Terminal 8  ──────►│ ENABLE       │  Terminal 8 ──►│ ENABLE       │
-GND         ──────►│ GND          │  GND        ──►│ GND          │
-                   └──────────────┘                └──────────────┘
+                LEADSHINE DRIVER (X)            LEADSHINE DRIVER (Y)
+               ┌──────────────┐                ┌──────────────┐
+Terminal 2 ───►│ PUL+ (Step)  │  Terminal 3 ──►│ PUL+ (Step)  │
+Terminal 5 ───►│ DIR+ (Dir)   │  Terminal 6 ──►│ DIR+ (Dir)   │
+Terminal 8 ───►│ ENA+ (Enable)│  Terminal 8 ──►│ ENA+ (Enable)│
+GND        ───►│ PUL-/DIR-/ENA│  GND        ──►│ PUL-/DIR-/ENA│
+               └──────────────┘                └──────────────┘
 ```
 
 | Screw Terminal | Arduino Pin | GRBL Function | Wire To |
 |:--------------:|:-----------:|---------------|---------|
-| **2** | D2 | X Step | X stepper driver STEP input |
-| **3** | D3 | Y Step | Y stepper driver STEP input |
-| **5** | D5 | X Direction | X stepper driver DIR input |
-| **6** | D6 | Y Direction | Y stepper driver DIR input |
-| **8** | D8 | Stepper Enable | Both drivers ENABLE (active low) |
-| **GND** | GND | Ground | Both drivers GND (signal ground) |
+| **2** | D2 | X Step | X Leadshine driver PUL+ |
+| **3** | D3 | Y Step | Y Leadshine driver PUL+ |
+| **5** | D5 | X Direction | X Leadshine driver DIR+ |
+| **6** | D6 | Y Direction | Y Leadshine driver DIR+ |
+| **8** | D8 | Stepper Enable | Both drivers ENA+ (active low) |
+| **GND** | GND | Ground | Both drivers PUL-/DIR-/ENA- |
 
 > **Note:** Terminal 8 (Enable) is shared — run a wire from terminal 8 to both the X and Y driver enable inputs. The enable signal is active-low: LOW = motors engaged, HIGH = motors released.
 
 ### Torch Fire (Plasma Trigger)
 
-The torch fire signal uses the **spindle enable** pin. When FireControl sends M3 (spindle on), this pin goes HIGH to trigger your plasma cutter.
+The torch fire signal uses the **spindle enable** pin. When FireControl sends M3 (spindle on), this pin goes HIGH to trigger the plasma cutter. The CrossFire's electronics enclosure already has a MOSFET/transistor circuit for torch triggering — connect pin 12 to the torch trigger input on the CrossFire's wiring harness.
 
 | Screw Terminal | Arduino Pin | Function | Wire To |
 |:--------------:|:-----------:|----------|---------|
-| **12** | D12 | Torch Fire | Relay module IN (or MOSFET gate) |
-| **5V** | 5V | Relay power | Relay module VCC |
-| **GND** | GND | Ground | Relay module GND |
-
-Connect the relay's normally-open (NO) contacts in parallel with your plasma cutter's manual trigger switch. When FireControl fires the torch (M3), pin 12 goes HIGH, the relay closes, and the plasma fires.
-
-> **Safety:** Always use a relay or optocoupled MOSFET to isolate the Arduino from the plasma cutter's trigger circuit. Never connect the Arduino directly to the plasma trigger.
+| **12** | D12 | Torch Fire | CrossFire torch trigger input |
+| **GND** | GND | Ground | CrossFire trigger ground |
 
 ### Limit Switches (Optional)
 
@@ -84,22 +80,20 @@ Connect the relay's normally-open (NO) contacts in parallel with your plasma cut
 
 ```
 ELECTRONICS-SALON SCREW TERMINAL SHIELD
-┌─────────────────────────────────────────────────────┐
-│                                                     │
-│  Terminal 2  ── X STEP ──────► X Driver STEP        │
-│  Terminal 3  ── Y STEP ──────► Y Driver STEP        │
-│  Terminal 5  ── X DIR  ──────► X Driver DIR         │
-│  Terminal 6  ── Y DIR  ──────► Y Driver DIR         │
-│  Terminal 8  ── ENABLE ──┬───► X Driver EN          │
-│                          └───► Y Driver EN          │
-│  Terminal 12 ── TORCH  ──────► Relay IN             │
-│  Terminal A5 ── THC    ──────► THC Module (optional) │
-│  GND         ────────────┬───► X Driver GND         │
-│                          ├───► Y Driver GND         │
-│                          └───► Relay GND            │
-│  5V          ────────────────► Relay VCC             │
-│                                                     │
-└─────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│  Terminal 2  ── X STEP ──────► X Leadshine PUL+          │
+│  Terminal 3  ── Y STEP ──────► Y Leadshine PUL+          │
+│  Terminal 5  ── X DIR  ──────► X Leadshine DIR+          │
+│  Terminal 6  ── Y DIR  ──────► Y Leadshine DIR+          │
+│  Terminal 8  ── ENABLE ──┬───► X Leadshine ENA+          │
+│                          └───► Y Leadshine ENA+          │
+│  Terminal 12 ── TORCH  ──────► CrossFire torch trigger   │
+│  Terminal A5 ── THC    ──────► THC Module (optional)     │
+│  GND         ────────────┬───► Leadshine PUL-/DIR-/ENA-  │
+│                          └───► CrossFire trigger ground   │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ## Flashing Guide
@@ -116,13 +110,28 @@ FireControl checks the USB Vendor ID and Product ID before it will connect. A st
 - **Target PID:** `0EFB`
 - **Device Name:** "Langmuir Systems CrossFire"
 
+#### Which USB Chip Do You Have?
+
+Different Arduino Uno revisions use different USB interface chips. This matters for flashing:
+
+| Arduino Version | USB Chip | DFU USB PID | Hex File |
+|-----------------|----------|-------------|----------|
+| Uno R2 (and earlier) | AT90USB82 | `03EB:2FF7` | `CrossFire-spoof-8u2.hex` |
+| Uno R3 | ATmega16U2 | `03EB:2FEF` | `CrossFire-spoof-16u2.hex` |
+| Uno R3 (some clones) | ATmega8U2 | `03EB:2FEE` | `CrossFire-spoof-16u2.hex` |
+| Chinese clones | CH340G | N/A | **Cannot use DFU method** |
+
+> **Important:** If your Arduino uses a CH340 USB chip (common on cheap clones), this method won't work. You need an Uno with an Atmel USB chip (ATmega16U2 or AT90USB82).
+
 #### Entering DFU Mode
 
 The ATmega16U2 is the small chip near the USB port on the Arduino Uno. To reprogram it, you need to put it into DFU (Device Firmware Update) mode:
 
-1. **Locate the ICSP2 header** — This is the 6-pin header closest to the USB port (not the one near the power jack). On most Uno R3 boards it's labeled "ICSP" or "ICSP2".
+1. **Plug the Arduino into USB** — it should be connected to your computer.
 
-2. **Briefly short RESET to GND** — Using a jumper wire or tweezers, momentarily connect the RESET pin to the GND pin on the ICSP2 header. The pinout is:
+2. **Locate the ICSP2 header** — This is the 6-pin header closest to the USB port (not the one near the power jack).
+
+3. **Briefly short RESET to GND** — Using a jumper wire or tweezers, momentarily connect the RESET pin to the GND pin on the ICSP2 header:
    ```
    ICSP2 Header (near USB port):
    ┌───────────┐
@@ -132,40 +141,83 @@ The ATmega16U2 is the small chip near the USB port on the Arduino Uno. To reprog
    └───────────┘
    ```
 
-3. **Verify DFU mode** — In Device Manager (Windows), you should now see "ATmega16U2 DFU" instead of a COM port. On Linux, `lsusb` will show Atmel DFU device.
+4. **Verify DFU mode** — The Arduino's COM port will disappear from Device Manager. Windows will detect a new USB device with Atmel's DFU VID (`03EB`). The PID tells you which chip you have (see table above).
 
-#### Flashing with Atmel FLIP (Windows)
+#### Installing the USB Driver (Windows)
 
-1. Download and install [Atmel FLIP](https://www.microchip.com/en-us/development-tool/flip) from Microchip
-2. Open FLIP, select device **ATmega16U2**
-3. Connect via USB (the DFU device)
-4. Load the hex file: `firmware/CrossFire-spoof-16u2.hex`
-5. Click **Run** to program
-6. Unplug and replug the Arduino
+Windows doesn't have a built-in driver for the Atmel DFU device. You need **Zadig** to install one:
 
-#### Flashing with dfu-programmer (Linux/Mac)
+1. Download [Zadig](https://zadig.akeo.ie/)
+2. Run Zadig, go to **Options > List All Devices**
+3. Select **"Arduino Uno DFU"** (or similar — look for VID `03EB`)
+4. Note the USB ID to identify your chip variant
+5. Select **libusb-win32** as the target driver
+6. Click **Install Driver** (or **Replace Driver**)
 
+#### Installing dfu-programmer
+
+Download [dfu-programmer](https://github.com/dfu-programmer/dfu-programmer/releases) and extract it. On Windows, you'll have `dfu-programmer.exe` and `libusb-1.0.dll`.
+
+On Linux/Mac:
 ```bash
-# Install dfu-programmer
 sudo apt install dfu-programmer    # Debian/Ubuntu
 brew install dfu-programmer         # macOS
+```
 
-# Put Arduino in DFU mode (short RESET-GND on ICSP2), then:
-sudo dfu-programmer atmega16u2 erase
-sudo dfu-programmer atmega16u2 flash firmware/CrossFire-spoof-16u2.hex
-sudo dfu-programmer atmega16u2 reset
+#### Flashing the USB Firmware
+
+**For ATmega16U2 (Uno R3):**
+
+```bash
+# Step 1: Erase the chip
+dfu-programmer atmega16u2 erase
+
+# Step 2: Flash the spoofed firmware (preserves DFU bootloader)
+dfu-programmer atmega16u2 flash --suppress-bootloader-mem firmware/CrossFire-spoof-16u2.hex
+
+# Step 3: Exit DFU mode and run new firmware
+dfu-programmer atmega16u2 launch
+```
+
+**For AT90USB82 (Uno R2):**
+
+```bash
+dfu-programmer at90usb82 erase
+dfu-programmer at90usb82 flash --suppress-bootloader-mem firmware/CrossFire-spoof-8u2.hex
+dfu-programmer at90usb82 launch
+```
+
+> **Note:** The `--suppress-bootloader-mem` flag is important — it prevents overwriting the DFU bootloader itself, so you can reflash again in the future.
+
+> **Not sure which chip?** Try each target until one connects:
+> ```bash
+> dfu-programmer at90usb82 get      # Uno R2 (PID 2FF7)
+> dfu-programmer atmega16u2 get     # Uno R3 (PID 2FEF)
+> dfu-programmer atmega8u2 get      # Some boards (PID 2FEE)
+> ```
+
+#### Alternative: Flashing via AVR ISP Programmer
+
+If you have an AVR ISP MK2 or similar programmer, you can flash the USB chip directly via the ICSP2 header without using DFU mode:
+
+```bash
+# Backup existing firmware first
+avrdude -p atmega16u2 -c avrispmkii -P usb -B 10 \
+    -U flash:r:usb-chip-backup.hex:i
+
+# Flash spoofed firmware
+avrdude -p atmega16u2 -c avrispmkii -P usb -B 10 \
+    -U flash:w:firmware/CrossFire-spoof-16u2.hex:i
 ```
 
 #### Verify
 
-After replugging, the Arduino should now appear as:
+Unplug and replug the Arduino. It should now appear as:
 - **Windows Device Manager:** "Langmuir Systems CrossFire" on a new COM port
 - **Linux:** `lsusb` shows `16d0:0efb`
 - **Arduino CLI:** `arduino-cli board list` shows the new VID/PID
 
-> **Note:** For Arduino Uno R2 (older, with AT90USB82 instead of ATmega16U2), use `firmware/CrossFire-spoof-8u2.hex` instead.
-
-> **Reverting:** If you need to restore the original Arduino USB firmware, flash the original Arduino Uno USB firmware from the Arduino IDE install directory (`hardware/arduino/avr/firmwares/atmegaxxu2/`).
+> **Reverting:** To restore the original Arduino USB firmware, enter DFU mode again and flash the stock firmware from the Arduino IDE install directory (`hardware/arduino/avr/firmwares/atmegaxxu2/`).
 
 ### Step 2: Flash GRBL Firmware
 
@@ -282,21 +334,22 @@ crossgrbl/
 - Verify USB VID/PID was flashed correctly: check Device Manager for "Langmuir Systems CrossFire"
 - If it still shows as "Arduino Uno", the USB firmware flash didn't take — retry DFU mode
 - Make sure you're using the correct hex file (16u2 vs 8u2)
+- CH340-based Arduino clones cannot be spoofed — you need a genuine Uno or one with an ATmega16U2/AT90USB82
 
 ### Motors don't move
-- Check terminal 8 (Enable) is wired to both drivers — it must be LOW to enable
+- Check terminal 8 (Enable) is wired to both Leadshine drivers — it must be LOW to enable
 - Verify STEP and DIR wires are on the correct terminals (2/5 for X, 3/6 for Y)
-- Check your stepper driver power supply is on
+- Check your Leadshine driver power supply is on
+- Verify the Leadshine drivers are configured for the correct microstepping
 
 ### Axis moves in wrong direction
-- Swap the DIR wire polarity on the stepper driver, OR
+- Swap the DIR wire polarity on the Leadshine driver, OR
 - Change the direction invert mask: `$3=1` (invert X), `$3=2` (invert Y), `$3=3` (invert both)
 
 ### Torch won't fire
-- Check terminal 12 is wired to relay input
-- Verify relay VCC is connected to 5V and GND to GND
+- Check terminal 12 is wired to the CrossFire torch trigger input
 - Test manually: send `M3` via serial terminal, pin 12 should go HIGH
-- Check relay NO contacts are wired across plasma trigger switch
+- Verify continuity from terminal 12 to the CrossFire trigger circuit
 
 ### Version mismatch warning in FireControl
 - Ensure GRBL reports `1.3ls` — connect via serial at 115200 baud and check startup banner
