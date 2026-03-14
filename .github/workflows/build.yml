@@ -1,0 +1,40 @@
+name: Build GRBL Firmware
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'grbl/**'
+      - 'Makefile'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'grbl/**'
+      - 'Makefile'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install AVR toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-avr avr-libc binutils-avr
+
+      - name: Create build directory
+        run: mkdir -p build
+
+      - name: Build firmware
+        run: make
+
+      - name: Show firmware size
+        run: avr-size --format=berkeley build/main.elf
+
+      - name: Upload hex artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: crossgrbl-firmware
+          path: grbl.hex

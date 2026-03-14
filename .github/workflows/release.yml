@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install AVR toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-avr avr-libc binutils-avr
+
+      - name: Create build directory
+        run: mkdir -p build
+
+      - name: Build firmware
+        run: make
+
+      - name: Show firmware size
+        run: avr-size --format=berkeley build/main.elf
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Rename hex with version
+        run: cp grbl.hex crossgrbl-${{ steps.version.outputs.version }}.hex
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          VERSION=${{ steps.version.outputs.version }}
+          GRBL_VER=$(grep 'GRBL_VERSION ' grbl/grbl.h | head -1 | cut -d'"' -f2)
+          BUILD_DATE=$(grep 'GRBL_VERSION_BUILD' grbl/grbl.h | cut -d'"' -f2)
+          SIZE=$(avr-size --format=berkeley build/main.elf | tail -1 | awk '{print $1}')
+
+          cat > release-notes.md << EOF
+          ## CrossGRBL ${VERSION}
+
+          GRBL version: **${GRBL_VER}** (build ${BUILD_DATE})
+          Firmware size: **${SIZE} bytes** (of 32256 available)
+
+          ### Included Files
+
+          | File | Description |
+          |------|-------------|
+          | \`crossgrbl-${VERSION}.hex\` | GRBL firmware for ATmega328P (flash to Arduino Uno main chip) |
+          | \`CrossFire-spoof-16u2.hex\` | USB VID/PID spoof for Arduino Uno R3 (ATmega16U2) |
+          | \`CrossFire-spoof-8u2.hex\` | USB VID/PID spoof for Arduino Uno R2 (AT90USB82) |
+          | \`THC-spoof-8u2.hex\` | USB VID/PID spoof for THC module |
+
+          ### Quick Flash
+
+          \`\`\`bash
+          # Flash GRBL firmware (after USB spoof is done)
+          arduino-cli upload -p COMxx --fqbn arduino:avr:uno --input-file crossgrbl-${VERSION}.hex
+          \`\`\`
+
+          See [README](https://github.com/${{ github.repository }}/blob/main/README.md) for full setup guide including USB VID/PID flashing and wiring.
+          EOF
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: release-notes.md
+          files: |
+            crossgrbl-${{ steps.version.outputs.version }}.hex
+            firmware/CrossFire-spoof-16u2.hex
+            firmware/CrossFire-spoof-8u2.hex
+            firmware/THC-spoof-8u2.hex
