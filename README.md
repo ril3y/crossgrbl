@@ -312,6 +312,9 @@ These are baked into the firmware but can be changed at runtime via serial comma
 
 ## THC (Torch Height Controller) — Optional
 
+> **⚠️ WARNING: UNTESTED FUNCTIONALITY**
+> The THC (Torch Height Controller) firmware and integration has **NOT been tested** with actual hardware. This feature is included from the original grbl-ls codebase but remains unverified in this implementation. Use at your own risk and please report results if you test it.
+
 The `thc-firmware/` directory contains firmware for a separate Arduino Nano that acts as a Torch Height Controller, replacing the $750 Langmuir LS-THC module with a ~$15 DIY solution.
 
 Arduino Nano clones with CH340 USB chips have VID `1A86` PID `7523`, which matches the Langmuir LS-THC — **no USB spoofing needed**.
