@@ -317,23 +317,85 @@ Check that `$100` and `$101` show the correct steps/mm for your lead screws.
 
 **Note:** The original CrossFire tables that shipped with Mach3 control software typically require the inverted firmware due to different motor driver wiring conventions.
 
+## Hardware Speed Limitations
+
+**Important:** The Arduino Uno has a **maximum step rate of ~30,000 steps/second**. This hardware limitation determines your actual maximum speed based on your lead screw configuration.
+
+### Why Speeds Above the Limit Don't Go Faster
+
+When you command a speed that exceeds the Arduino's step generation capability, the machine will simply move at the maximum achievable speed. For example:
+- **Commanding 120 IPM** → Machine moves at 120 IPM ✓
+- **Commanding 200 IPM** → Machine moves at ~120 IPM (hardware limit)
+- **Commanding 300 IPM** → Machine moves at ~120 IPM (hardware limit)
+
+**All speeds above the limit result in the same actual speed** — the hardware maximum.
+
+### Maximum Speeds by Configuration
+
+| Lead Screw | Steps/mm | Arduino Limit | Max Speed | Firmware Setting |
+|------------|----------|---------------|-----------|------------------|
+| **8 TPI** (Mach3 CrossFire) | 503.936 | 30,000 steps/sec | **120 IPM** | `$110=3048` |
+| **2 TPI** (Gen2 CrossFire) | 125.984 | 30,000 steps/sec | **480 IPM** | `$110=12192` |
+
+**Calculation:** `Max Speed (mm/sec) = 30,000 steps/sec ÷ steps/mm`
+
+### Why 8 TPI is Limited to 120 IPM
+
+With **8 threads per inch** lead screws (3.175mm lead):
+- **503.936 steps/mm** required per millimeter of travel
+- At **120 IPM** (3,048 mm/min): Uses ~25,400 steps/sec ✓ Safe
+- At **200 IPM** (5,080 mm/min): Would need ~42,700 steps/sec ❌ Exceeds limit
+- At **300 IPM** (7,620 mm/min): Would need ~64,000 steps/sec ❌ Far exceeds limit
+
+**Result:** Commanding speeds above 120 IPM will trigger error messages in FireControl and the machine will move at the hardware maximum (~120 IPM) regardless of commanded speed.
+
+### Practical Implications
+
+- **Plasma cutting speeds:** Typically 40-100 IPM depending on material thickness
+- **Rapid positioning:** 120 IPM is plenty fast for moving between cuts
+- **Gen2 users:** With 2 TPI lead screws, you can rapid at 480 IPM due to 4x fewer steps/mm
+
+**Note:** The firmware max speed settings (`$110`, `$111`) are configured appropriately for each lead screw type and prevent you from commanding impossible speeds.
+
 ## GRBL Settings (CrossFire Defaults)
 
 These are baked into the firmware but can be changed at runtime via serial commands (`$x=value`):
+
+### 8 TPI Firmware (Mach3 CrossFire)
 
 | Setting | Value | Description |
 |---------|-------|-------------|
 | `$0` | 10 | Step pulse time (microseconds) |
 | `$1` | 255 | Step idle delay (255 = always on) |
-| `$100` | 125.984 | X steps/mm |
-| `$101` | 125.984 | Y steps/mm |
+| `$3` | 3 | Direction invert mask (X+Y inverted) |
+| `$100` | 503.936 | X steps/mm (8 TPI = 3.175mm lead) |
+| `$101` | 503.936 | Y steps/mm (8 TPI = 3.175mm lead) |
 | `$102` | 266.666 | Z steps/mm |
-| `$110` | 7620 | X max rate (mm/min) |
-| `$111` | 7620 | Y max rate (mm/min) |
-| `$112` | 3810 | Z max rate (mm/min) |
+| `$110` | 3048 | X max rate (120 IPM - hardware limited) |
+| `$111` | 3048 | Y max rate (120 IPM - hardware limited) |
+| `$112` | 3810 | Z max rate (150 IPM) |
 | `$120` | 980 | X acceleration (mm/sec^2) |
 | `$121` | 980 | Y acceleration (mm/sec^2) |
 | `$122` | 980 | Z acceleration (mm/sec^2) |
+
+### 2 TPI Firmware (Gen2 CrossFire)
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `$0` | 10 | Step pulse time (microseconds) |
+| `$1` | 255 | Step idle delay (255 = always on) |
+| `$3` | 0 | Direction invert mask (no inversion) |
+| `$100` | 125.984 | X steps/mm (2 TPI = 12.7mm lead) |
+| `$101` | 125.984 | Y steps/mm (2 TPI = 12.7mm lead) |
+| `$102` | 266.666 | Z steps/mm |
+| `$110` | 12192 | X max rate (480 IPM - hardware safe) |
+| `$111` | 12192 | Y max rate (480 IPM - hardware safe) |
+| `$112` | 3810 | Z max rate (150 IPM) |
+| `$120` | 980 | X acceleration (mm/sec^2) |
+| `$121` | 980 | Y acceleration (mm/sec^2) |
+| `$122` | 980 | Z acceleration (mm/sec^2) |
+
+**To reset to firmware defaults after flashing:** Send `$RST=$` in FireControl console, then power cycle the Arduino.
 
 ## THC (Torch Height Controller) — Optional
 
