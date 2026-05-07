@@ -46,28 +46,18 @@ jobs:
           # Restore original file
           git checkout grbl/defaults.h
 
-      - name: Get version tag
-        id: get_version
+      - name: List built files
         run: |
-          if [[ $GITHUB_REF == refs/tags/* ]]; then
-            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          else
-            echo "VERSION=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Rename firmware files with version
-        run: |
-          VERSION="${{ steps.get_version.outputs.VERSION }}"
-          mv crossgrbl-inverted.hex crossgrbl-inverted-${VERSION}.hex
-          mv crossgrbl-standard.hex crossgrbl-standard-${VERSION}.hex
+          echo "Built firmware files:"
+          ls -lh crossgrbl-*.hex
 
       - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
         with:
           name: crossgrbl-firmware
           path: |
-            crossgrbl-inverted-*.hex
-            crossgrbl-standard-*.hex
+            crossgrbl-inverted.hex
+            crossgrbl-standard.hex
           retention-days: 90
 
       - name: Create Release
@@ -75,8 +65,8 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            crossgrbl-inverted-*.hex
-            crossgrbl-standard-*.hex
+            crossgrbl-inverted.hex
+            crossgrbl-standard.hex
           body: |
             ## CrossGRBL Firmware Release
 
@@ -84,12 +74,12 @@ jobs:
 
             ### 📦 Firmware Files
 
-            **`crossgrbl-inverted-*.hex`** - **RECOMMENDED FOR MACH3 CONVERSIONS**
+            **`crossgrbl-inverted.hex`** - **RECOMMENDED FOR MACH3 CONVERSIONS**
             - For original Mach3-based CrossFire tables
             - Inverts both X and Y axis directions (`$3=3`)
             - Use if BOTH axes move backwards with standard firmware
 
-            **`crossgrbl-standard-*.hex`** - For Standard Langmuir Wiring
+            **`crossgrbl-standard.hex`** - For Standard Langmuir Wiring
             - For newer CrossFire models with standard wiring
             - No axis direction inversion (`$3=0`)
             - Matches official Langmuir grbl-ls configuration
@@ -98,12 +88,12 @@ jobs:
 
             Flash the firmware using arduino-cli:
             ```bash
-            arduino-cli upload -p COMxx --fqbn arduino:avr:uno --input-file crossgrbl-inverted-*.hex
+            arduino-cli upload -p COMxx --fqbn arduino:avr:uno --input-file crossgrbl-inverted.hex
             ```
 
             Or using avrdude:
             ```bash
-            avrdude -c arduino -p atmega328p -P COMxx -b 115200 -U flash:w:crossgrbl-inverted-*.hex:i
+            avrdude -c arduino -p atmega328p -P COMxx -b 115200 -U flash:w:crossgrbl-inverted.hex:i
             ```
 
             Replace `COMxx` with your actual COM port.
