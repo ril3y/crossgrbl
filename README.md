@@ -263,7 +263,32 @@ make flash PROGRAMMER="-c arduino -P COMxx -b 115200"
 1. Open FireControl
 2. It should detect **"CrossFire Gen 2"** on the COM port
 3. Status bar shows connection and version **1.3ls**
-4. Try jogging — if the motors move in the correct direction, you're done
+
+### Step 4: Load Firmware Defaults (IMPORTANT!)
+
+**GRBL stores settings in EEPROM which persists across firmware updates.** After flashing, you must reset to load the new firmware defaults:
+
+**In FireControl Console/Terminal, send:**
+```
+$RST=$
+```
+
+Then **power cycle** the Arduino (unplug/replug USB).
+
+**Or manually set the key values:**
+```
+$100=503.936  (X steps/mm for 8TPI)
+$101=503.936  (Y steps/mm for 8TPI)
+$3=3          (Invert X and Y for Mach3 wiring)
+```
+
+**Verify settings loaded:**
+```
+$$
+```
+Check that `$100` and `$101` show the correct steps/mm for your lead screws.
+
+4. Try jogging — if the motors move in the correct direction and distance, you're done
 5. If an axis moves backwards, flip the DIR wires on that stepper driver (or change `$3` direction invert mask)
 
 ## Firmware Versions
