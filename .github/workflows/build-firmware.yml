@@ -49,6 +49,8 @@ jobs:
         run: |
           sed -i '71s/.*/  #define DEFAULT_X_STEPS_PER_MM 125.984/' grbl/defaults.h
           sed -i '72s/.*/  #define DEFAULT_Y_STEPS_PER_MM 125.984/' grbl/defaults.h
+          sed -i '74s/.*/  #define DEFAULT_X_MAX_RATE 12192.0 \/\/ mm\/min (480 IPM - safe for 125.984 steps\/mm)/' grbl/defaults.h
+          sed -i '75s/.*/  #define DEFAULT_Y_MAX_RATE 12192.0 \/\/ mm\/min (480 IPM - safe for 125.984 steps\/mm)/' grbl/defaults.h
           make
           mv grbl.hex crossgrbl-2tpi-inverted.hex
           make clean
@@ -58,6 +60,8 @@ jobs:
         run: |
           sed -i '71s/.*/  #define DEFAULT_X_STEPS_PER_MM 125.984/' grbl/defaults.h
           sed -i '72s/.*/  #define DEFAULT_Y_STEPS_PER_MM 125.984/' grbl/defaults.h
+          sed -i '74s/.*/  #define DEFAULT_X_MAX_RATE 12192.0 \/\/ mm\/min (480 IPM - safe for 125.984 steps\/mm)/' grbl/defaults.h
+          sed -i '75s/.*/  #define DEFAULT_Y_MAX_RATE 12192.0 \/\/ mm\/min (480 IPM - safe for 125.984 steps\/mm)/' grbl/defaults.h
           sed -i '87s/.*/  #define DEFAULT_DIRECTION_INVERT_MASK 0/' grbl/defaults.h
           make
           mv grbl.hex crossgrbl-2tpi-standard.hex

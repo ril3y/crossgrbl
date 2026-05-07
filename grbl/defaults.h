@@ -71,9 +71,9 @@
   #define DEFAULT_X_STEPS_PER_MM 503.936
   #define DEFAULT_Y_STEPS_PER_MM 503.936
   #define DEFAULT_Z_STEPS_PER_MM 266.666
-  #define DEFAULT_X_MAX_RATE 7620.0 // mm/min
-  #define DEFAULT_Y_MAX_RATE 7620.0 // mm/min
-  #define DEFAULT_Z_MAX_RATE 3810.0 // mm/min
+  #define DEFAULT_X_MAX_RATE 3048.0 // mm/min (120 IPM - safe for 503.936 steps/mm)
+  #define DEFAULT_Y_MAX_RATE 3048.0 // mm/min (120 IPM - safe for 503.936 steps/mm)
+  #define DEFAULT_Z_MAX_RATE 3810.0 // mm/min (150 IPM)
   #define DEFAULT_X_ACCELERATION (980.0*60*60) // 10*60*60 mm/min^2 = 10 mm/sec^2
   #define DEFAULT_Y_ACCELERATION (980.0*60*60) // 10*60*60 mm/min^2 = 10 mm/sec^2
   #define DEFAULT_Z_ACCELERATION (980.0*60*60) // 10*60*60 mm/min^2 = 10 mm/sec^2
