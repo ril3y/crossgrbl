@@ -8,10 +8,11 @@ The CrossFire already has external **Leadshine stepper drivers** built into the 
 
 ## What You Need
 
-| Component | Purpose | Approx Cost |
-|-----------|---------|-------------|
-| Arduino Uno R3 | Motion controller (ATmega328P @ 16MHz) | ~$25 |
-| Electronics-Salon Screw Terminal Shield | Breakout for wiring to CrossFire drivers | ~$8 |
+| Component | Purpose | Link | Approx Cost |
+|-----------|---------|------|-------------|
+| Arduino Uno R3 | Motion controller (ATmega328P @ 16MHz) | [Amazon](https://www.amazon.com/dp/B0BXNVH53Y) | ~$25 |
+| Electronics-Salon Screw Terminal Shield | Breakout for wiring to CrossFire drivers | [Amazon](https://www.amazon.com/dp/B07HF2DD7T) | ~$8 |
+| USB Cable (Arduino to PC) | For flashing firmware and connection | Included with Arduino | - |
 
 **Total: ~$33** (vs $200+ for a stock CrossFire replacement board)
 
@@ -49,6 +50,12 @@ GND        ───►│ PUL-/DIR-/ENA│  GND        ──►│ PUL-/DIR-/E
 | **GND** | GND | Ground | Both drivers PUL-/DIR-/ENA- |
 
 > **Note:** Terminal 8 (Enable) is shared — run a wire from terminal 8 to both the X and Y driver enable inputs. The enable signal is active-low: LOW = motors engaged, HIGH = motors released.
+
+### Wiring Diagram
+
+![Arduino Uno Wiring to CrossFire](docs/images/wiring.jpg)
+
+*Completed wiring showing Arduino Uno with screw terminal shield connected to CrossFire Leadshine drivers*
 
 ### Torch Fire (Plasma Trigger)
 
