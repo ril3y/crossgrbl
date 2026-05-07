@@ -29,14 +29,43 @@ jobs:
       - name: Create build directory
         run: mkdir -p build
 
-      - name: Build firmware
-        run: make
+      - name: Build inverted firmware (for Mach3 Crossfire)
+        run: |
+          make
+          mv grbl.hex crossgrbl-inverted.hex
+          make clean
 
-      - name: Upload firmware artifact
+      - name: Build standard firmware
+        run: |
+          # Temporarily change direction invert mask to 0 for standard version
+          sed -i 's/DEFAULT_DIRECTION_INVERT_MASK ((1<<X_AXIS)|(1<<Y_AXIS))/DEFAULT_DIRECTION_INVERT_MASK 0/' grbl/defaults.h
+          make
+          mv grbl.hex crossgrbl-standard.hex
+          # Restore original file
+          git checkout grbl/defaults.h
+
+      - name: Get version tag
+        id: get_version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=dev-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Rename firmware files with version
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          mv crossgrbl-inverted.hex crossgrbl-inverted-${VERSION}.hex
+          mv crossgrbl-standard.hex crossgrbl-standard-${VERSION}.hex
+
+      - name: Upload firmware artifacts
         uses: actions/upload-artifact@v4
         with:
           name: crossgrbl-firmware
-          path: grbl.hex
+          path: |
+            crossgrbl-inverted-*.hex
+            crossgrbl-standard-*.hex
           retention-days: 90
 
       - name: Create Release
@@ -44,26 +73,49 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            grbl.hex
+            crossgrbl-inverted-*.hex
+            crossgrbl-standard-*.hex
           body: |
             ## CrossGRBL Firmware Release
 
-            ### Changes in this release:
-            - Fixed X and Y axis direction for Langmuir CrossFire
-            - Set `DEFAULT_DIRECTION_INVERT_MASK` to invert both X and Y axes
+            This release includes **two firmware variants** for different CrossFire configurations:
 
-            ### Installation:
+            ### 📦 Firmware Files
+
+            **`crossgrbl-inverted-*.hex`** - **RECOMMENDED FOR MACH3 CONVERSIONS**
+            - For original Mach3-based CrossFire tables
+            - Inverts both X and Y axis directions (`$3=3`)
+            - Use if BOTH axes move backwards with standard firmware
+
+            **`crossgrbl-standard-*.hex`** - For Standard Langmuir Wiring
+            - For newer CrossFire models with standard wiring
+            - No axis direction inversion (`$3=0`)
+            - Matches official Langmuir grbl-ls configuration
+
+            ### 🔧 Installation
 
             Flash the firmware using arduino-cli:
             ```bash
-            arduino-cli upload -p COMxx --fqbn arduino:avr:uno --input-file grbl.hex
+            arduino-cli upload -p COMxx --fqbn arduino:avr:uno --input-file crossgrbl-inverted-*.hex
             ```
 
             Or using avrdude:
             ```bash
-            avrdude -c arduino -p atmega328p -P COMxx -b 115200 -U flash:w:grbl.hex:i
+            avrdude -c arduino -p atmega328p -P COMxx -b 115200 -U flash:w:crossgrbl-inverted-*.hex:i
             ```
 
             Replace `COMxx` with your actual COM port.
+
+            ### ⚠️ Which firmware should you use?
+
+            **Start with `standard` firmware** and test:
+            - +X → should move RIGHT
+            - -X → should move LEFT
+            - +Y → should move AWAY (back)
+            - -Y → should move TOWARD you (front)
+
+            If BOTH axes move backwards, use the `inverted` firmware.
+
+            See the [README](https://github.com/ril3y/crossgrbl#firmware-versions) for more details.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

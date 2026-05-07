@@ -259,6 +259,32 @@ make flash PROGRAMMER="-c arduino -P COMxx -b 115200"
 4. Try jogging — if the motors move in the correct direction, you're done
 5. If an axis moves backwards, flip the DIR wires on that stepper driver (or change `$3` direction invert mask)
 
+## Firmware Versions
+
+**IMPORTANT:** There are two firmware versions available depending on your CrossFire model and wiring:
+
+### Standard Firmware (crossgrbl-standard-vX.X.X.hex)
+- For newer CrossFire models with standard Langmuir wiring
+- No axis direction inversion (`$3=0`)
+- Use if your axes move correctly with the official Langmuir firmware
+
+### Inverted Firmware (crossgrbl-inverted-vX.X.X.hex) - **RECOMMENDED FOR MACH3 CONVERSIONS**
+- For original Mach3-based CrossFire tables converted to grbl
+- Inverts both X and Y axis directions (`$3=3`)
+- Use if BOTH axes move backwards with standard firmware
+
+**How to tell which version you need:**
+1. Flash the **standard** firmware first
+2. Test axis movement in FireControl:
+   - Press +X → should move RIGHT
+   - Press -X → should move LEFT
+   - Press +Y → should move AWAY (back)
+   - Press -Y → should move TOWARD you (front)
+3. If BOTH X and Y move in the wrong direction, use the **inverted** firmware
+4. If only ONE axis is wrong, check your wiring or use `$3` settings to invert individual axes
+
+**Note:** The original CrossFire tables that shipped with Mach3 control software typically require the inverted firmware due to different motor driver wiring conventions.
+
 ## GRBL Settings (CrossFire Defaults)
 
 These are baked into the firmware but can be changed at runtime via serial commands (`$x=value`):
