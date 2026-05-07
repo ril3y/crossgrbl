@@ -67,9 +67,9 @@
 #endif
 
 #ifdef DEFAULTS_CROSSFIRE
-  // CrossFire CNC Plasma
-  #define DEFAULT_X_STEPS_PER_MM 125.984
-  #define DEFAULT_Y_STEPS_PER_MM 125.984
+  // CrossFire CNC Plasma (Mach3/Gen1 with 8TPI lead screws)
+  #define DEFAULT_X_STEPS_PER_MM 503.936
+  #define DEFAULT_Y_STEPS_PER_MM 503.936
   #define DEFAULT_Z_STEPS_PER_MM 266.666
   #define DEFAULT_X_MAX_RATE 7620.0 // mm/min
   #define DEFAULT_Y_MAX_RATE 7620.0 // mm/min
