@@ -31,21 +31,37 @@ jobs:
       - name: Create build directory
         run: mkdir -p build
 
-      - name: Build inverted firmware (for Mach3 Crossfire)
+      - name: Build 8TPI-inverted (Mach3 CrossFire)
         run: |
           make
-          mv grbl.hex crossgrbl-inverted.hex
+          mv grbl.hex crossgrbl-8tpi-inverted.hex
           make clean
 
-      - name: Build standard firmware
+      - name: Build 8TPI-standard
         run: |
-          # Temporarily change direction invert mask to 0 for standard version (line 87 in defaults.h)
-          sed -i '87s/.*/  #define DEFAULT_DIRECTION_INVERT_MASK 0 \/\/ Standard wiring (no inversion)/' grbl/defaults.h
-          echo "Verification - Crossfire direction mask after sed:"
-          sed -n '85,90p' grbl/defaults.h
+          sed -i '87s/.*/  #define DEFAULT_DIRECTION_INVERT_MASK 0/' grbl/defaults.h
           make
-          mv grbl.hex crossgrbl-standard.hex
-          # Restore original file
+          mv grbl.hex crossgrbl-8tpi-standard.hex
+          make clean
+          git checkout grbl/defaults.h
+
+      - name: Build 2TPI-inverted (Gen2 with reversed wiring)
+        run: |
+          sed -i '71s/.*/  #define DEFAULT_X_STEPS_PER_MM 125.984/' grbl/defaults.h
+          sed -i '72s/.*/  #define DEFAULT_Y_STEPS_PER_MM 125.984/' grbl/defaults.h
+          make
+          mv grbl.hex crossgrbl-2tpi-inverted.hex
+          make clean
+          git checkout grbl/defaults.h
+
+      - name: Build 2TPI-standard (Gen2 CrossFire)
+        run: |
+          sed -i '71s/.*/  #define DEFAULT_X_STEPS_PER_MM 125.984/' grbl/defaults.h
+          sed -i '72s/.*/  #define DEFAULT_Y_STEPS_PER_MM 125.984/' grbl/defaults.h
+          sed -i '87s/.*/  #define DEFAULT_DIRECTION_INVERT_MASK 0/' grbl/defaults.h
+          make
+          mv grbl.hex crossgrbl-2tpi-standard.hex
+          make clean
           git checkout grbl/defaults.h
 
       - name: List built files
@@ -58,8 +74,10 @@ jobs:
         with:
           name: crossgrbl-firmware
           path: |
-            crossgrbl-inverted.hex
-            crossgrbl-standard.hex
+            crossgrbl-8tpi-inverted.hex
+            crossgrbl-8tpi-standard.hex
+            crossgrbl-2tpi-inverted.hex
+            crossgrbl-2tpi-standard.hex
           retention-days: 90
 
       - name: Create Release
@@ -67,49 +85,67 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            crossgrbl-inverted.hex
-            crossgrbl-standard.hex
+            crossgrbl-8tpi-inverted.hex
+            crossgrbl-8tpi-standard.hex
+            crossgrbl-2tpi-inverted.hex
+            crossgrbl-2tpi-standard.hex
           body: |
             ## CrossGRBL Firmware Release
 
-            This release includes **two firmware variants** for different CrossFire configurations:
+            This release includes **4 firmware variants** for different CrossFire configurations:
 
             ### 📦 Firmware Files
 
-            **`crossgrbl-inverted.hex`** - **RECOMMENDED FOR MACH3 CONVERSIONS**
-            - For original Mach3-based CrossFire tables
-            - Inverts both X and Y axis directions (`$3=3`)
-            - Use if BOTH axes move backwards with standard firmware
+            **8 TPI Lead Screws (Mach3/Gen1 CrossFire)** - 503.936 steps/mm
+            - **`crossgrbl-8tpi-inverted.hex`** ⭐ **RECOMMENDED FOR MACH3 CROSSFIRE**
+              - For original Mach3 CrossFire with reversed wiring
+              - 8 threads per inch lead screws (3.175mm lead)
+              - X/Y axes inverted (`$3=3`)
 
-            **`crossgrbl-standard.hex`** - For Standard Langmuir Wiring
-            - For newer CrossFire models with standard wiring
-            - No axis direction inversion (`$3=0`)
-            - Matches official Langmuir grbl-ls configuration
+            - **`crossgrbl-8tpi-standard.hex`**
+              - For 8 TPI lead screws with standard wiring
+              - No axis inversion (`$3=0`)
+
+            **2 TPI Lead Screws (Gen2 CrossFire)** - 125.984 steps/mm
+            - **`crossgrbl-2tpi-inverted.hex`**
+              - For Gen2 CrossFire with reversed wiring
+              - 0.5" lead per revolution (12.7mm)
+              - X/Y axes inverted (`$3=3`)
+
+            - **`crossgrbl-2tpi-standard.hex`** ⭐ **RECOMMENDED FOR GEN2 CROSSFIRE**
+              - For Gen2 CrossFire with standard wiring
+              - Matches official Langmuir grbl-ls configuration
+              - No axis inversion (`$3=0`)
 
             ### 🔧 Installation
 
             Flash the firmware using arduino-cli:
             ```bash
-            arduino-cli upload -p COMxx --fqbn arduino:avr:uno --input-file crossgrbl-inverted.hex
+            arduino-cli upload -p COMxx --fqbn arduino:avr:uno --input-file crossgrbl-8tpi-inverted.hex
             ```
 
             Or using avrdude:
             ```bash
-            avrdude -c arduino -p atmega328p -P COMxx -b 115200 -U flash:w:crossgrbl-inverted.hex:i
+            avrdude -c arduino -p atmega328p -P COMxx -b 115200 -U flash:w:crossgrbl-8tpi-inverted.hex:i
             ```
 
-            Replace `COMxx` with your actual COM port.
+            Replace `COMxx` with your actual COM port and filename.
 
             ### ⚠️ Which firmware should you use?
 
-            **Start with `standard` firmware** and test:
-            - +X → should move RIGHT
-            - -X → should move LEFT
-            - +Y → should move AWAY (back)
-            - -Y → should move TOWARD you (front)
+            **Step 1: Identify your lead screws**
+            - Measure 1 inch along your lead screw
+            - Count the threads: **8 threads = 8 TPI**, **2 threads = 2 TPI**
 
-            If BOTH axes move backwards, use the `inverted` firmware.
+            **Step 2: Test axis directions**
+            - Flash the appropriate TPI firmware (standard version)
+            - Jog +X and +Y - should move RIGHT and AWAY
+            - If BOTH axes move backwards, use the **inverted** version
 
-            See the [README](https://github.com/ril3y/crossgrbl#firmware-versions) for more details.
+            **Quick Guide:**
+            - **Mach3 CrossFire** → `crossgrbl-8tpi-inverted.hex` ⭐
+            - **Gen2 CrossFire** → `crossgrbl-2tpi-standard.hex` ⭐
+
+            See the [README](https://github.com/ril3y/crossgrbl#firmware-versions) for detailed setup instructions.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
