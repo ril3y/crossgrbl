@@ -37,8 +37,10 @@ jobs:
 
       - name: Build standard firmware
         run: |
-          # Temporarily change direction invert mask to 0 for standard version
-          sed -i 's/DEFAULT_DIRECTION_INVERT_MASK ((1<<X_AXIS)|(1<<Y_AXIS))/DEFAULT_DIRECTION_INVERT_MASK 0/' grbl/defaults.h
+          # Temporarily change direction invert mask to 0 for standard version (line 87 in defaults.h)
+          sed -i '87s/.*/  #define DEFAULT_DIRECTION_INVERT_MASK 0 \/\/ Standard wiring (no inversion)/' grbl/defaults.h
+          echo "Verification - Crossfire direction mask after sed:"
+          sed -n '85,90p' grbl/defaults.h
           make
           mv grbl.hex crossgrbl-standard.hex
           # Restore original file
